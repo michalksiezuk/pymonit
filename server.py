@@ -60,10 +60,10 @@ def get_system_info():
 
 
 def run(server_class=HTTPServer, handler_class=Server, port=8080):
-    server_address = ('', port)
+    server_address = ("0.0.0.0", port)
     httpd = server_class(server_address, handler_class)
 
-    print("Starting pymonit server on port %d..." % port)
+    print("Starting pymonit server on port %d" % port)
     httpd.serve_forever()
 
 
