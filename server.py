@@ -12,42 +12,58 @@ class Server(BaseHTTPRequestHandler):
         self._set_headers()
 
     def do_GET(self):
-        encoded_data = json.dumps(get_sensor_data()).encode()
+        encoded_data = json.dumps(get_system_info()).encode()
 
         self._set_headers()
         self.wfile.write(encoded_data)
 
 
-def get_sensor_data():
-    import wmi
+def get_temperature_data(sensor):
+    return {
+        "id": sensor.Identifier,
+        "type": "Temperature",
+        "name": sensor.Name,
+        "value": sensor.Value,
+        "max": sensor.Max,
+        "min": sensor.Min,
+    }
 
-    temperature_sensors = [
-        "/nvidiagpu/0/temperature/0",
-        "/amdcpu/0/temperature/0"
-    ]
-    sensor_data = []
+
+def get_system_info():
+    import wmi
 
     machine = wmi.WMI(namespace="OpenHardwareMonitor")
 
-    # Temperature sensors
-    for sensor in machine.Sensor(SensorType="Temperature"):
-        if sensor.Identifier in temperature_sensors:
-            sensor_data.append({
-                "id": sensor.Identifier,
-                "name": sensor.Name,
-                "value": sensor.Value,
-                "max": sensor.Max,
-                "min": sensor.Min
-            })
+    cpu_id = "/amdcpu/0"
+    gpu_id = "/nvidiagpu/0"
 
-    return sensor_data
+    temperature_sensor_suffix = "/temperature/0"
+
+    return [
+        {
+            "id": cpu_id,
+            "type": "CPU",
+            "name": machine.Hardware(Identifier=cpu_id)[0].Name,
+            "sensors": [
+                get_temperature_data(machine.Sensor(Identifier=cpu_id + temperature_sensor_suffix)[0]),
+            ],
+        },
+        {
+            "id": gpu_id,
+            "type": "GPU",
+            "name": machine.hardware(Identifier=gpu_id)[0].Name,
+            "sensors": [
+                get_temperature_data(machine.Sensor(Identifier=gpu_id + temperature_sensor_suffix)[0]),
+            ],
+        },
+    ]
 
 
 def run(server_class=HTTPServer, handler_class=Server, port=8080):
     server_address = ('', port)
     httpd = server_class(server_address, handler_class)
 
-    print("Starting httpd on port %d..." % port)
+    print("Starting pymonit server on port %d..." % port)
     httpd.serve_forever()
 
 
