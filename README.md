@@ -1,6 +1,6 @@
 # pymonit
 
-Python server for remote PC monitoring.
+Python server and client for remote PC vitals monitoring.
 
 ## Requirements
 
@@ -10,7 +10,7 @@ Open Hardware Monitor https://openhardwaremonitor.org/ installation is required 
 
 ## Server
 
-`server.py` is a simple httpd that returns CPU and GPU sensor data wrapped in JSON.
+`server.py` is a simple httpd that returns PC vitals data wrapped in JSON. Server binds to all host interfaces so it's accessible on local network. Default port is `8080`.
 
 ```json
 [

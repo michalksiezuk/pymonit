@@ -1,5 +1,5 @@
-from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 
 class Server(BaseHTTPRequestHandler):
@@ -23,7 +23,7 @@ def get_temperature_data(sensor):
         "id": sensor.Identifier,
         "type": "Temperature",
         "name": sensor.Name,
-        "value": sensor.Value,
+        "val": sensor.Value,
         "max": sensor.Max,
         "min": sensor.Min,
     }
