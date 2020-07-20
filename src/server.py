@@ -1,8 +1,17 @@
 import json
+import socketserver
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from typing import Tuple
+
+import wmi
 
 
-class Server(BaseHTTPRequestHandler):
+class PymonitServer(BaseHTTPRequestHandler):
+    def __init__(self, request: bytes, client_address: Tuple[str, int], server: socketserver.BaseServer):
+        self._machine = wmi.WMI(namespace="OpenHardwareMonitor")
+
+        super().__init__(request, client_address, server)
+
     def _set_headers(self):
         self.send_response(200)
         self.send_header("Content-type", "application/json")
@@ -12,7 +21,8 @@ class Server(BaseHTTPRequestHandler):
         self._set_headers()
 
     def do_GET(self):
-        encoded_data = json.dumps(get_system_info()).encode()
+        system_info = self._get_system_info()
+        encoded_data = json.dumps(system_info).encode()
 
         self._set_headers()
         self.wfile.write(encoded_data)
@@ -20,68 +30,51 @@ class Server(BaseHTTPRequestHandler):
     def log_message(self, fmt, *args):
         pass
 
+    def _get_system_info(self):
+        hardware = [
+            ["CPU", "/amdcpu/0"],
+            ["GPU", "/nvidiagpu/0"]
+        ]
 
-def format_sensor_data(sensor, sensor_type):
-    return {
-        "id": sensor.Identifier,
-        "type": sensor_type,
-        "name": sensor.Name,
-        "val": sensor.Value,
-        "max": sensor.Max,
-        "min": sensor.Min,
-    }
+        return list(map(self._format_hardware_data, hardware))
 
+    def _format_hardware_data(self, hardware):
+        temperature_sensor_suffix = "/temperature/0"
+        load_sensor_suffix = "/load/0"
 
-def get_system_info():
-    import wmi
-
-    machine = wmi.WMI(namespace="OpenHardwareMonitor")
-
-    cpu_id = "/amdcpu/0"
-    gpu_id = "/nvidiagpu/0"
-
-    temperature_sensor_suffix = "/temperature/0"
-    load_sensor_suffix = "/load/0"
-
-    return [
-        {
-            "id": cpu_id,
-            "type": "CPU",
-            "name": machine.Hardware(Identifier=cpu_id)[0].Name,
+        return {
+            "id": hardware[1],
+            "type": hardware[0],
+            "name": self._machine.Hardware(Identifier=hardware[1])[0].Name,
             "sensors": [
-                format_sensor_data(
-                    machine.Sensor(Identifier=cpu_id + temperature_sensor_suffix)[0],
+                self._format_sensor_data(
+                    self._machine.Sensor(Identifier=hardware[1] + temperature_sensor_suffix)[0],
                     "Temperature"
                 ),
-                format_sensor_data(
-                    machine.Sensor(Identifier=cpu_id + load_sensor_suffix)[0],
+                self._format_sensor_data(
+                    self._machine.Sensor(Identifier=hardware[1] + load_sensor_suffix)[0],
                     "Load"
                 )
             ],
-        },
-        {
-            "id": gpu_id,
-            "type": "GPU",
-            "name": machine.hardware(Identifier=gpu_id)[0].Name,
-            "sensors": [
-                format_sensor_data(
-                    machine.Sensor(Identifier=gpu_id + temperature_sensor_suffix)[0],
-                    "Temperature"
-                ),
-                format_sensor_data(
-                    machine.Sensor(Identifier=gpu_id + load_sensor_suffix)[0],
-                    "Load"
-                )
-            ],
-        },
-    ]
+        }
+
+    @staticmethod
+    def _format_sensor_data(sensor, sensor_type):
+        return {
+            "id": sensor.Identifier,
+            "type": sensor_type,
+            "name": sensor.Name,
+            "val": sensor.Value,
+            "max": sensor.Max,
+            "min": sensor.Min,
+        }
 
 
-def run(server_class=HTTPServer, handler_class=Server, port=8080):
+def run(server_class=HTTPServer, handler_class=PymonitServer, port=8080):
+    print(f"Starting pymonit server on port {port}")
+
     server_address = ("0.0.0.0", port)
     httpd = server_class(server_address, handler_class)
-
-    print(f"Starting pymonit server on port {port}")
     httpd.serve_forever()
 
 
