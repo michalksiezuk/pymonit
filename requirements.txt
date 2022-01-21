@@ -19,7 +19,7 @@ gevent==20.6.2
 gevent-websocket==0.10.1
 greenlet==0.4.16
 idna==2.10
-ipython==7.16.1
+ipython==7.16.3
 ipython-genutils==0.2.0
 jedi==0.17.1
 jsonschema==3.2.0
