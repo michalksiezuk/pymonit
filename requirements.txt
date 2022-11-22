@@ -29,7 +29,7 @@ nbformat==5.0.7
 parso==0.7.0
 pefile==2019.4.18
 pickleshare==0.7.5
-Pillow==7.2.0
+Pillow==9.3.0
 prompt-toolkit==3.0.5
 pycparser==2.20
 pyfiglet==0.8.post1
